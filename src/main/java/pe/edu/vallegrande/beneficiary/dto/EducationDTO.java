@@ -1,14 +1,9 @@
 package pe.edu.vallegrande.beneficiary.dto;
-
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 @Data
-@Getter
-@Setter
 public class EducationDTO {
-    private Long idEducation;
+    private Integer idEducation;
     private String degreeStudy;
     private String gradeBook;
     private int gradeAverage;
@@ -16,4 +11,5 @@ public class EducationDTO {
     private String assistance;
     private String tutorials;
     private Integer personId;
+
 }
