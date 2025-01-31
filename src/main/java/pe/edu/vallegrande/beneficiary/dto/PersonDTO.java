@@ -2,6 +2,7 @@ package pe.edu.vallegrande.beneficiary.dto;
 
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -17,6 +18,6 @@ public class PersonDTO {
     private String sponsored;
     private String state;
     private Integer familyId;
-    private List<EducationDTO> education; // Cambiado a List<EducationDTO>
-    private List<HealthDTO> health;
+   private List<EducationDTO> education = new ArrayList<>(); // Inicializar como lista vacía
+    private List<HealthDTO> health = new ArrayList<>(); // Inicializar como lista vacía
 }
