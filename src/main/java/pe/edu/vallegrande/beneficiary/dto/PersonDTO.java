@@ -18,6 +18,6 @@ public class PersonDTO {
     private String sponsored;
     private String state;
     private Integer familyId;
-   private List<EducationDTO> education = new ArrayList<>(); // Inicializar como lista vacía
-    private List<HealthDTO> health = new ArrayList<>(); // Inicializar como lista vacía
+    private List<EducationDTO> education = new ArrayList<>();
+    private List<HealthDTO> health = new ArrayList<>();
 }

@@ -11,5 +11,4 @@ public class EducationDTO {
     private String assistance;
     private String tutorials;
     private Integer personId;
-
 }

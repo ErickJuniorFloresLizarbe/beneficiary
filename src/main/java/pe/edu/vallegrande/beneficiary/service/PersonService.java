@@ -1,20 +1,16 @@
 package pe.edu.vallegrande.beneficiary.service;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import pe.edu.vallegrande.beneficiary.dto.EducationDTO;
-import pe.edu.vallegrande.beneficiary.dto.HealthDTO;
 import pe.edu.vallegrande.beneficiary.dto.PersonDTO;
-import pe.edu.vallegrande.beneficiary.dto.PersonRequest;
-import pe.edu.vallegrande.beneficiary.dto.PersonResponse;
-import pe.edu.vallegrande.beneficiary.dto.SavedPersonDTO;
+import pe.edu.vallegrande.beneficiary.dto.HealthDTO;
+import pe.edu.vallegrande.beneficiary.dto.EducationDTO;
+import pe.edu.vallegrande.beneficiary.model.Person;
 import pe.edu.vallegrande.beneficiary.model.Education;
 import pe.edu.vallegrande.beneficiary.model.Health;
-import pe.edu.vallegrande.beneficiary.model.Person;
 import pe.edu.vallegrande.beneficiary.repository.EducationRepository;
 import pe.edu.vallegrande.beneficiary.repository.HealthRepository;
 import pe.edu.vallegrande.beneficiary.repository.PersonRepository;
@@ -33,270 +29,143 @@ public class PersonService {
     @Autowired
     private HealthRepository healthRepository;
 
-    // Método privado para mapear Person a Person
-    private PersonDTO mapToPersonDTO(Person person) {
-    PersonDTO personDTO = new PersonDTO();
-    personDTO.setIdPerson(person.getIdPerson());
-        personDTO.setName(person.getName());
-        personDTO.setSurname(person.getSurname());
-        personDTO.setAge(person.getAge());
-        personDTO.setBirthdate(person.getBirthdate());
-        personDTO.setTypeDocument(person.getTypeDocument());
-        personDTO.setDocumentNumber(person.getDocumentNumber());
-        personDTO.setTypeKinship(person.getTypeKinship());
-        personDTO.setSponsored(person.getSponsored());
-        personDTO.setState(person.getState());
-        personDTO.setFamilyId(person.getFamilyId());
-        return personDTO;
+    //LISTADO DE BENEFICIARIOS ACTIVOS Y INACTIVOS
+    public Flux<PersonDTO> getPersonsByTypeKinshipAndState(String typeKinship, String state) {
+        return personRepository.findByTypeKinshipAndState(typeKinship, state)
+                .map(this::convertToDTO);
     }
 
-    // Método privado para mapear Education a EducationDTO
-    private EducationDTO mapToEducationDTO(Education education) {
-        EducationDTO educationDTO = new EducationDTO();
-        educationDTO.setIdEducation(education.getIdEducation());
-        educationDTO.setDegreeStudy(education.getDegreeStudy());
-        educationDTO.setGradeBook(education.getGradeBook());
-        educationDTO.setGradeAverage(education.getGradeAverage());
-        educationDTO.setFullNotebook(education.getFullNotebook());
-        educationDTO.setAssistance(education.getAssistance());
-        educationDTO.setTutorials(education.getTutorials());
-        educationDTO.setPersonId(education.getPersonId());
-        return educationDTO;
+    //LISTADO DE APADRINADOS ACTIVOS Y INACTIVOS
+    public Flux<PersonDTO> getPersonsBySponsoredAndState(String sponsored, String state) {
+        return personRepository.findBySponsoredAndState(sponsored, state)
+                .map(this::convertToDTO);
     }
 
-    // Método privado para mapear Health a HealthDTO
-    private HealthDTO mapToHealthDTO(Health health) {
-        HealthDTO healthDTO = new HealthDTO();
-        healthDTO.setIdHealth(health.getIdHealth());
-        healthDTO.setVaccine(health.getVaccine());
-        healthDTO.setVph(health.getVph());
-        healthDTO.setInfluenza(health.getInfluenza());
-        healthDTO.setDeworming(health.getDeworming());
-        healthDTO.setHemoglobin(health.getHemoglobin());
-        healthDTO.setPersonId(health.getPersonId());
-        return healthDTO;
-    }
-
-    //LISTADO ID
-    public Flux<PersonDTO> getPersonWithDetails(Integer idPerson) {
-        return personRepository.findByIdPerson(idPerson)
+    //LISTADO COMPLETOS DE BENEFICIARIOS POR ID
+     public Mono<PersonDTO> getPersonByIdWithDetails(Integer id) {
+        return personRepository.findById(id)
                 .flatMap(person -> {
-                    return Mono.zip(
-                            educationRepository.findByPersonId(person.getIdPerson()) // Cambiado a getIdPerson()
-                                    .collectList()
-                                    .defaultIfEmpty(Collections.emptyList()),
-                            healthRepository.findByPersonId(person.getIdPerson()) // Cambiado a getIdPerson()
-                                    .collectList()
-                                    .defaultIfEmpty(Collections.emptyList()),
-                            (educations, healths) -> {
-                                // Mapeo a PersonDTO
-                                PersonDTO personDTO = mapToPersonDTO(person);
-    
-                                // Asignar detalles de educación y salud
-                                personDTO.setEducation(educations.stream()
-                                        .map(this::mapToEducationDTO)
-                                        .collect(Collectors.toList()));
-                                personDTO.setHealth(healths.stream()
-                                        .map(this::mapToHealthDTO)
-                                        .collect(Collectors.toList()));
-    
-                                return personDTO;
-                            }
-                    );
-                })
-                .switchIfEmpty(Flux.error(new RuntimeException("No se encontraron personas con el ID proporcionado")));
-    }
-    
-    //LISTADO ALL
-    public Flux<PersonDTO> getAllPersons() {
-        return personRepository.findAll()
-                .flatMap(person -> Mono.zip(
-                        educationRepository.findByPersonId(person.getIdPerson())
-                                .collectList() // Ahora esto funcionará porque devuelve un Flux
-                                .defaultIfEmpty(Collections.emptyList()), // Maneja el caso vacío
-                        healthRepository.findByPersonId(person.getIdPerson())
-                                .collectList() // Ahora esto funcionará porque devuelve un Flux
-                                .defaultIfEmpty(Collections.emptyList()), // Maneja el caso vacío
-                        (educations, healths) -> {
-                            PersonDTO personDTO = mapToPersonDTO(person); // Usa el método de mapeo
-    
-                            // Mapea la lista de educaciones
-                            List<EducationDTO> educationDTOs = educations.stream()
-                                    .map(this::mapToEducationDTO)
-                                    .collect(Collectors.toList());
-                            personDTO.setEducation(educationDTOs);
-    
-                            // Mapea la lista de salud
-                            List<HealthDTO> healthDTOs = healths.stream()
-                                    .map(this::mapToHealthDTO)
-                                    .collect(Collectors.toList());
-                            personDTO.setHealth(healthDTOs);
-    
-                            return personDTO;
-                        }
-                ))
-                .switchIfEmpty(Flux.error(new RuntimeException("No se encontraron personas")));
-    }
-
-
-
-
-    //METODO PARA CREAR NUEVO REGISTRO
-    private Person convertToEntity(PersonDTO personDTO) {
-        Person person = new Person();
-        person.setName(personDTO.getName());
-        person.setSurname(personDTO.getSurname());
-        person.setAge(personDTO.getAge());
-        person.setBirthdate(personDTO.getBirthdate());
-        person.setTypeDocument(personDTO.getTypeDocument());
-        person.setDocumentNumber(personDTO.getDocumentNumber());
-        person.setTypeKinship(personDTO.getTypeKinship());
-        person.setSponsored(personDTO.getSponsored());
-        person.setState(personDTO.getState());
-        person.setFamilyId(personDTO.getFamilyId());
-        return person;
-    }
-
-
-    private Mono<Void> saveEducationAndHealth(PersonDTO personDTO, Integer personId) {
-        Flux<Education> educationFlux = Flux.fromIterable(personDTO.getEducation())
-                .map(educationDTO -> {
-                    Education education = new Education();
-                    education.setDegreeStudy(educationDTO.getDegreeStudy());
-                    education.setGradeBook(educationDTO.getGradeBook());
-                    education.setGradeAverage(educationDTO.getGradeAverage());
-                    education.setFullNotebook(educationDTO.getFullNotebook());
-                    education.setAssistance(educationDTO.getAssistance());
-                    education.setTutorials(educationDTO.getTutorials());
-                    education.setPersonId(personId);
-                    return education;
-                });
-    
-        Flux<Health> healthFlux = Flux.fromIterable(personDTO.getHealth())
-                .map(healthDTO -> {
-                    Health health = new Health();
-                    health.setVaccine(healthDTO.getVaccine());
-                    health.setVph(healthDTO.getVph());
-                    health.setInfluenza(healthDTO.getInfluenza());
-                    health.setDeworming(healthDTO.getDeworming());
-                    health.setHemoglobin(healthDTO.getHemoglobin());
-                    health.setPersonId(personId);
-                    return health;
-                });
-    
-        return Flux.concat(educationRepository.saveAll(educationFlux), healthRepository.saveAll(healthFlux)).then();
-    }
-    
-    
-        public Mono<PersonResponse> registerPersons(PersonRequest personRequest) {
-    List<PersonDTO> persons = personRequest.getPersons();
-
-    // Procesar cada persona
-    return Flux.fromIterable(persons)
-            .flatMap(personDTO -> {
-                Person person = convertToEntity(personDTO); // Convierte PersonDTO a Person
-
-                return personRepository.save(person)
-                        .flatMap(savedPerson -> {
-                            // Aquí definimos explícitamente el tipo de retorno
-                            return Mono.zip(
-                                    saveEducationAndHealth(personDTO, savedPerson.getIdPerson()),
-                                    Mono.just(savedPerson) // Retorna el savedPerson
-                            ).map(tuple -> {
-                                // Aquí puedes crear el SavedPersonDTO
-                                return new SavedPersonDTO(
-                                        savedPerson.getIdPerson(),
-                                        savedPerson.getName(),
-                                        savedPerson.getSurname(),
-                                        savedPerson.getAge(),
-                                        savedPerson.getBirthdate(),
-                                        savedPerson.getTypeDocument(),
-                                        savedPerson.getDocumentNumber(),
-                                        savedPerson.getTypeKinship(),
-                                        savedPerson.getSponsored(),
-                                        savedPerson.getState(),
-                                        savedPerson.getFamilyId(),
-                                        personDTO.getEducation(),
-                                        personDTO.getHealth()
-                                );
+                    PersonDTO dto = convertToDTO(person);
+                    return educationRepository.findByPersonId(person.getIdPerson())
+                            .collectList()
+                            .flatMap(educationList -> {
+                                // Convierte la lista de Education a EducationDTO
+                                List<EducationDTO> educationDTOList = educationList.stream()
+                                        .map(this::convertToEducationDTO)
+                                        .collect(Collectors.toList());
+                                dto.setEducation(educationDTOList);
+                                return healthRepository.findByPersonId(person.getIdPerson())
+                                        .collectList()
+                                        .map(healthList -> {
+                                            // Convierte la lista de Health a HealthDTO
+                                            List<HealthDTO> healthDTOList = healthList.stream()
+                                                    .map(this::convertToHealthDTO)
+                                                    .collect(Collectors.toList());
+                                            dto.setHealth(healthDTOList);
+                                            return dto;
+                                        });
                             });
-                        });
-            })
-            .collectList() // Recoge todos los SavedPersonDTO en una lista
-            // En tu servicio
-        .map(savedPersons -> new PersonResponse(null, savedPersons)); // Pasando null para la lista de PersonDTO
+                });
+    }
 
-}
+    //ELIMINADO LOGICO
+    public Mono<Void> deletePerson(Integer id) {
+        return personRepository.updateStateById(id, "I")
+                .then();
+    }
+
+    //RESTAURADO LOGICO
+    public Mono<Void> restorePerson(Integer id) {
+        return personRepository.updateStateById(id, "A")
+                .then();
+    }
+
+     //EDITA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
+    public Mono<Void> updatePersonWithNewIds(PersonDTO personDTO) {
+        return Mono.when(
+                personRepository.updateStateById(personDTO.getIdPerson(), personDTO.getState()),
+    
+                // Verificar si se proporcionaron datos de education
+                personDTO.getEducation() != null && !personDTO.getEducation().isEmpty() ?
+                        educationRepository.insertEducation(
+                                personDTO.getEducation().get(0).getDegreeStudy(),
+                                personDTO.getEducation().get(0).getGradeBook(),
+                                personDTO.getEducation().get(0).getGradeAverage(),
+                                personDTO.getEducation().get(0).getFullNotebook(),
+                                personDTO.getEducation().get(0).getAssistance(),
+                                personDTO.getEducation().get(0).getTutorials(),
+                                personDTO.getIdPerson()
+                        ) : Mono.empty(),
+    
+                // Verificar si se proporcionaron datos de health
+                personDTO.getHealth() != null && !personDTO.getHealth().isEmpty() ?
+                        healthRepository.insertHealth(
+                                personDTO.getHealth().get(0).getVaccine(),
+                                personDTO.getHealth().get(0).getVph(),
+                                personDTO.getHealth().get(0).getInfluenza(),
+                                personDTO.getHealth().get(0).getDeworming(),
+                                personDTO.getHealth().get(0).getHemoglobin(),
+                                personDTO.getIdPerson()
+                        ) : Mono.empty()
+        ).then();
+    }
+
+    //EDITAR DATOS PERSONALES SIN GENERAR NUEVO ID
+    public Mono<Void> updatePersonData(PersonDTO personDTO) {
+        return personRepository.updatePerson(
+                personDTO.getIdPerson(),
+                personDTO.getName(),
+                personDTO.getSurname(),
+                personDTO.getAge(),
+                personDTO.getBirthdate(),
+                personDTO.getTypeDocument(),
+                personDTO.getDocumentNumber(),
+                personDTO.getTypeKinship(),
+                personDTO.getSponsored(),
+                personDTO.getState(),
+                personDTO.getFamilyId()
+        ).then();
+    }
 
 
-        //EDITAR 
-        public Mono<PersonResponse> updatePerson(Integer idPerson, PersonRequest personRequest) {
-                PersonDTO updatedPersonDTO = personRequest.getPersons().get(0); // Obtener el primer elemento de la lista
-        
-                return personRepository.findByIdPerson(idPerson)
-                        .next() // Obtiene el primer elemento del Flux como un Mono
-                        .flatMap(existingPerson -> {
-                        // Actualiza los campos de la persona
-                        existingPerson.setName(updatedPersonDTO.getName());
-                        existingPerson.setSurname(updatedPersonDTO.getSurname());
-                        existingPerson.setAge(updatedPersonDTO.getAge());
-                        existingPerson.setBirthdate(updatedPersonDTO.getBirthdate());
-                        existingPerson.setTypeDocument(updatedPersonDTO.getTypeDocument());
-                        existingPerson.setDocumentNumber(updatedPersonDTO.getDocumentNumber());
-                        existingPerson.setTypeKinship(updatedPersonDTO.getTypeKinship());
-                        existingPerson.setSponsored(updatedPersonDTO.getSponsored());
-                        existingPerson.setState(updatedPersonDTO.getState());
-                        existingPerson.setFamilyId(updatedPersonDTO.getFamilyId());
-        
-                        // Guarda la persona actualizada
-                        return personRepository.save(existingPerson)
-                                .flatMap(savedPerson -> {
-                                        // Actualiza la educación y salud
-                                        return updateEducationAndHealth(savedPerson.getIdPerson(), updatedPersonDTO)
-                                                .then(Mono.just(savedPerson)); // Asegúrate de que esto sea Mono.just(savedPerson)
-                                });
-                        })
-                        .map(savedPerson -> new PersonResponse(Collections.singletonList(mapToPersonDTO(savedPerson)), null)); // Retorna el PersonResponse
-        }
-    
-    
+    private PersonDTO convertToDTO(Person person) {
+        PersonDTO dto = new PersonDTO();
+        dto.setIdPerson(person.getIdPerson());
+        dto.setName(person.getName());
+        dto.setSurname(person.getSurname());
+        dto.setAge(person.getAge());
+        dto.setBirthdate(person.getBirthdate());
+        dto.setTypeDocument(person.getTypeDocument());
+        dto.setDocumentNumber(person.getDocumentNumber());
+        dto.setTypeKinship(person.getTypeKinship());
+        dto.setSponsored(person.getSponsored());
+        dto.setState(person.getState());
+        dto.setFamilyId(person.getFamilyId());
+        return dto;
+    }
 
-        private Mono<Void> updateEducationAndHealth(Integer personId, PersonDTO updatedPersonDTO) {
-                // Actualizar Educación
-                Flux<Education> educationFlux = Flux.fromIterable(updatedPersonDTO.getEducation())
-                        .flatMap(educationDTO -> {
-                        Education newEducation = new Education();
-                        newEducation.setDegreeStudy(educationDTO.getDegreeStudy());
-                        newEducation.setGradeBook(educationDTO.getGradeBook());
-                        newEducation.setGradeAverage(educationDTO.getGradeAverage());
-                        newEducation.setFullNotebook(educationDTO.getFullNotebook());
-                        newEducation.setAssistance(educationDTO.getAssistance());
-                        newEducation.setTutorials(educationDTO.getTutorials());
-                        newEducation.setPersonId(personId);
-                        return educationRepository.save(newEducation);
-                        });
-        
-                // Actualizar Salud
-                Flux<Health> healthFlux = Flux.fromIterable(updatedPersonDTO.getHealth())
-                        .flatMap(healthDTO -> {
-                        Health newHealth = new Health();
-                        newHealth.setVaccine(healthDTO.getVaccine());
-                        newHealth.setVph(healthDTO.getVph());
-                        newHealth.setInfluenza(healthDTO.getInfluenza());
-                        newHealth.setDeworming(healthDTO.getDeworming());
-                        newHealth.setHemoglobin(healthDTO.getHemoglobin());
-                        newHealth.setPersonId(personId);
-                        return healthRepository.save(newHealth);
-                        });
-        
-                return Flux.concat(educationFlux, healthFlux).then(); // Combina ambas operaciones y devuelve Mono<Void>
-        }
-    
-            
-    
+    private EducationDTO convertToEducationDTO(Education education) {
+        EducationDTO dto = new EducationDTO();
+        dto.setIdEducation(education.getIdEducation());
+        dto.setDegreeStudy(education.getDegreeStudy());
+        dto.setGradeBook(education.getGradeBook());
+        dto.setGradeAverage(education.getGradeAverage());
+        dto.setFullNotebook(education.getFullNotebook());
+        dto.setAssistance(education.getAssistance());
+        dto.setTutorials(education.getTutorials());
+        dto.setPersonId(education.getPersonId());
+        return dto;
+    }
 
-        
-
-    
-    
+    private HealthDTO convertToHealthDTO(Health health) {
+        HealthDTO dto = new HealthDTO();
+        dto.setIdHealth(health.getIdHealth());
+        dto.setVaccine(health.getVaccine());
+        dto.setVph(health.getVph());
+        dto.setInfluenza(health.getInfluenza());
+        dto.setDeworming(health.getDeworming());
+        dto.setHemoglobin(health.getHemoglobin());
+        dto.setPersonId(health.getPersonId());
+        return dto;
+    }
 }

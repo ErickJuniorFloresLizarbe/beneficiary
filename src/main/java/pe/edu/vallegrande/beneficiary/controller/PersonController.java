@@ -1,44 +1,72 @@
 package pe.edu.vallegrande.beneficiary.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import pe.edu.vallegrande.beneficiary.dto.PersonRequest;
-import pe.edu.vallegrande.beneficiary.dto.PersonResponse;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import pe.edu.vallegrande.beneficiary.dto.PersonDTO;
 import pe.edu.vallegrande.beneficiary.service.PersonService;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/persons")
 @CrossOrigin(origins = "*")
 public class PersonController {
 
     @Autowired
     private PersonService personService;
+
+    //LISTADO DE ACTIVOS Y INACTIVOS BENEFICIARIOS Y APADRINADOS
+    @GetMapping("/filter")
+    public Flux<PersonDTO> getPersonsByTypeKinshipAndState(
+            @RequestParam String typeKinship,
+            @RequestParam String state) {
+        return personService.getPersonsByTypeKinshipAndState(typeKinship, state);
+    }
+
+    //LISTADO DE SOLO APADRINADOS
+    @GetMapping("/filter-sponsored")
+    public Flux<PersonDTO> getPersonsBySponsoredAndState(
+            @RequestParam String sponsored,
+            @RequestParam String state) {
+        return personService.getPersonsBySponsoredAndState(sponsored, state);
+    }
+
+    //LISTADO POR ID DE LOS BENEFICIARIOS
+    @GetMapping("/{id}/details")
+    public Mono<PersonDTO> getPersonByIdWithDetails(@PathVariable Integer id) {
+        return personService.getPersonByIdWithDetails(id);
+    }
+
+    //ELIMINADO LOGICO
+    @DeleteMapping("/{id}/delete")
+    public Mono<Void> deletePerson(@PathVariable Integer id) {
+        return personService.deletePerson(id);
+    }
+
+    //RESTAURADO LOGICO
+    @PutMapping("/{id}/restore")
+    public Mono<Void> restorePerson(@PathVariable Integer id) {
+        return personService.restorePerson(id);
+    }
+
+    //EDITA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
+    @PutMapping("/{id}/update")
+    public Mono<Void> updatePerson(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {
+        return personService.updatePersonWithNewIds(personDTO);
+    }
+
+    //EDITAR DATOS PERSONALES SIN GENERAR NUEVO ID
+    @PutMapping("/{id}/update-person")
+    public Mono<Void> updatePersonData(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {
+        return personService.updatePersonData(personDTO);
+    }
     
-    @GetMapping("/{id}")
-    public Mono<PersonResponse> getPersonDetails(@PathVariable Integer id) {
-        return personService.getPersonWithDetails(id)
-                .collectList() // Recoge todos los PersonDTO en una lista
-                .map(personDTOs -> new PersonResponse(personDTOs)); // Crea un PersonResponse con la lista
-    }
-
-    @GetMapping("/persons")
-    public Mono<PersonResponse> getAllPersons() {
-        return personService.getAllPersons()
-                .collectList() // Recoge todos los PersonDTO en una lista
-                .map(personDTOs -> new PersonResponse(personDTOs)); // Crea un PersonResponse con la lista
-    }
-    
-    @PostMapping("/register")
-    public Mono<PersonResponse> registerPersons(@RequestBody PersonRequest personRequest) {
-        return personService.registerPersons(personRequest);
-    }
-
-    @PutMapping("/persons/{id}")
-    public Mono<PersonResponse> updatePerson(@PathVariable Integer id, @RequestBody PersonRequest personRequest) {
-        return personService.updatePerson(id, personRequest);
-    }
-
 }
