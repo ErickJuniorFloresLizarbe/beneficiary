@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -68,5 +69,15 @@ public class PersonController {
     public Mono<Void> updatePersonData(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {
         return personService.updatePersonData(personDTO);
     }
-    
+
+    //MODIFICA EDUCATION Y HEALT SIN GENERAR UN NUEVO ID
+    @PutMapping("/{id}/correct-education-health")
+    public Mono<Void> correctEducationAndHealth(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {
+        return personService.correctEducationAndHealth(personDTO);
+    }
+
+    @PostMapping("/register")
+    public Mono<Void> registerPerson(@RequestBody PersonDTO personDTO) {
+        return personService.registerPerson(personDTO);
+    }
 }

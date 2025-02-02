@@ -80,7 +80,7 @@ public class PersonService {
                 .then();
     }
 
-     //EDITA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
+     //ACTUALIZA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
     public Mono<Void> updatePersonWithNewIds(PersonDTO personDTO) {
         return Mono.when(
                 personRepository.updateStateById(personDTO.getIdPerson(), personDTO.getState()),
@@ -126,6 +126,74 @@ public class PersonService {
                 personDTO.getFamilyId()
         ).then();
     }
+
+    //MODIFICA EDUCATION Y HEALT SIN GENERAR UN NUEVO ID
+    public Mono<Void> correctEducationAndHealth(PersonDTO personDTO) {
+        return Mono.when(
+                // Verificar si se proporcionaron datos de education y actualizar
+                personDTO.getEducation() != null && !personDTO.getEducation().isEmpty() ?
+                        educationRepository.updateEducation(
+                                personDTO.getEducation().get(0).getIdEducation(),
+                                personDTO.getEducation().get(0).getDegreeStudy(),
+                                personDTO.getEducation().get(0).getGradeBook(),
+                                personDTO.getEducation().get(0).getGradeAverage(),
+                                personDTO.getEducation().get(0).getFullNotebook(),
+                                personDTO.getEducation().get(0).getAssistance(),
+                                personDTO.getEducation().get(0).getTutorials()
+                        ) : Mono.empty(),
+    
+                // Verificar si se proporcionaron datos de health y actualizar
+                personDTO.getHealth() != null && !personDTO.getHealth().isEmpty() ?
+                        healthRepository.updateHealth(
+                                personDTO.getHealth().get(0).getIdHealth(),
+                                personDTO.getHealth().get(0).getVaccine(),
+                                personDTO.getHealth().get(0).getVph(),
+                                personDTO.getHealth().get(0).getInfluenza(),
+                                personDTO.getHealth().get(0).getDeworming(),
+                                personDTO.getHealth().get(0).getHemoglobin()
+                        ) : Mono.empty()
+        ).then();
+    }
+
+    //REGISTRA NUEVA PERSONA CON SUS DATOS DE EDUCATION Y HEALTH
+    public Mono<Void> registerPerson(PersonDTO personDTO) {
+        return personRepository.insertPerson(
+                personDTO.getName(),
+                personDTO.getSurname(),
+                personDTO.getAge(),
+                personDTO.getBirthdate(),
+                personDTO.getTypeDocument(),
+                personDTO.getDocumentNumber(),
+                personDTO.getTypeKinship(),
+                personDTO.getSponsored(),
+                personDTO.getState(),
+                personDTO.getFamilyId()
+        ).then(personRepository.getLastInsertedId())  // 🔹 Obtener el ID después de la inserción
+        .flatMap(personId -> 
+            Flux.concat(
+                Flux.fromIterable(personDTO.getEducation())
+                    .flatMap(edu -> educationRepository.insertEducation(
+                        edu.getDegreeStudy(), 
+                        edu.getGradeBook(), 
+                        edu.getGradeAverage(),
+                        edu.getFullNotebook(), 
+                        edu.getAssistance(), 
+                        edu.getTutorials(), 
+                        personId
+                    )),
+                Flux.fromIterable(personDTO.getHealth())
+                    .flatMap(health -> healthRepository.insertHealth(
+                        health.getVaccine(), 
+                        health.getVph(), 
+                        health.getInfluenza(),
+                        health.getDeworming(), 
+                        health.getHemoglobin(), 
+                        personId
+                    ))
+            ).then()
+        );
+    }
+    
 
 
     private PersonDTO convertToDTO(Person person) {

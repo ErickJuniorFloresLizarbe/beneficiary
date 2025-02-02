@@ -31,4 +31,14 @@ public interface PersonRepository extends R2dbcRepository<Person, Integer> {
                             String typeDocument, String documentNumber, String typeKinship,
                             String sponsored, String state, Integer familyId);
 
+    @Modifying
+    @Query("INSERT INTO person (name, surname, age, birthdate, type_document, document_number, type_kinship, sponsored, state, family_id_family) " +
+        "VALUES (:name, :surname, :age, :birthdate, :typeDocument, :documentNumber, :typeKinship, :sponsored, :state, :familyId)")
+    Mono<Integer> insertPerson(String name, String surname, Integer age, LocalDate birthdate, 
+                            String typeDocument, String documentNumber, String typeKinship, 
+                            String sponsored, String state, Integer familyId);
+
+    @Query("SELECT id_person FROM person ORDER BY id_person DESC LIMIT 1")
+    Mono<Integer> getLastInsertedId();
+
 }
